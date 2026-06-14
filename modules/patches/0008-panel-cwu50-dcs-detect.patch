@@ -1,8 +1,9 @@
 --- a/drivers/gpu/drm/panel/panel-cwu50.c
 +++ b/drivers/gpu/drm/panel/panel-cwu50.c
-@@ -635,6 +635,23 @@ static int cwu50_prepare(struct drm_panel *panel)
+@@ -632,18 +632,38 @@
+ 		dev_err(ctx->dev, "failed to enable vblank TE (%d)\n", ret);
+ 		return ret;
  	}
- 	/* Exit sleep mode and power on */
 +
 +	/*
 +	 * Without a panel ID GPIO (e.g. on CM5 where the RESX pin isn't
@@ -21,10 +22,9 @@
 +			ctx->is_new_panel = true;
 +	}
 +
+ 	/* Exit sleep mode and power on */
  	if (ctx->is_new_panel)
  		cwu50_init_sequence2(ctx);
- 	else
-@@ -641,8 +657,10 @@ static int cwu50_prepare(struct drm_panel *panel)
  	else
  		cwu50_init_sequence(ctx);
  
@@ -32,8 +32,6 @@
 -	if (ret) {
 -		dev_err(ctx->dev, "failed to exit sleep mode (%d)\n", ret);
 -		return ret;
--	}
--	msleep(120);
 +	if (ctx->id_gpio) {
 +		ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
 +		if (ret) {
@@ -41,29 +39,18 @@
 +			return ret;
 +		}
 +		msleep(120);
-+	}
+ 	}
+-	msleep(120);
  
  	ret = mipi_dsi_dcs_set_display_on(dsi);
-@@ -733,22 +751,46 @@ static int cwu50_probe(struct mipi_dsi_device *dsi)
+ 	if (ret) {
+@@ -730,20 +750,37 @@
  		return ret;
  	}
-
+ 
 -	ctx->is_new_panel = gpiod_get_value_cansleep(ctx->id_gpio);
 -	if (ctx->is_new_panel) {
 -		dev_info(dev, "Detected new panel type\n");
--	} else {
--		dev_info(dev, "Detected old panel type\n");
--	}
-
--	/*
--	 * Switch the ID GPIO to OUTPUT for use with resetting,
--	 * only if we're using the old panel. The new panel's
--	 * ID (RESX) pin is always pulled down (or: asserted)
--	 * externally.
--	 */
--	if (!ctx->is_new_panel) {
--		dev_info(dev, "Old panel type, setting ID GPIO to OUTPUT for resetting\n");
--		ret = gpiod_direction_output(ctx->id_gpio, 0);
 +	/*
 +	 * Detect panel type via ID GPIO if available.
 +	 *
@@ -84,26 +71,22 @@
 +			dev_info(dev, "GPIO: new panel\n");
 +		else
 +			dev_info(dev, "GPIO: old panel\n");
-+	} else {
+ 	} else {
+-		dev_info(dev, "Detected old panel type\n");
 +		dev_info(dev, "no panel ID GPIO -- will detect via DCS\n");
-+	}
-
-+	/*
-+	 * Switch the ID GPIO to OUTPUT for use with resetting,
+ 	}
+ 
+ 	/*
+ 	 * Switch the ID GPIO to OUTPUT for use with resetting,
+-	 * only if we're using the old panel. The new panel's
+-	 * ID (RESX) pin is always pulled down (or: asserted)
+-	 * externally.
 +	 * only if we're using the old panel and the GPIO exists.
 +	 * The new panel's ID (RESX) pin is always pulled down
 +	 * (or: asserted) externally.
-+	 */
+ 	 */
+-	if (!ctx->is_new_panel) {
 +	if (ctx->id_gpio && !ctx->is_new_panel) {
-+		dev_info(dev, "Old panel type, setting ID GPIO to OUTPUT for resetting\n");
-+		ret = gpiod_direction_output(ctx->id_gpio, 0);
-+
- 		if (ret) {
- 			dev_err(dev, "failed to set id_gpio to OUTPUT\n");
- 			return ret;
- 		}
- 	}
-+
-+	/*
-+	 * Request vci and iovcc regulators when they are defined
-+	 */
+ 		dev_info(dev, "Old panel type, setting ID GPIO to OUTPUT for resetting\n");
+ 		ret = gpiod_direction_output(ctx->id_gpio, 0);
+ 
