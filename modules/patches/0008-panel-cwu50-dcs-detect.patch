@@ -31,9 +31,9 @@
  		return ret;
  	}
 +	/*
-+	 * Read panel chip ID register via DCS to detect panel revision.
-+	 * The GPIO strapping pin is unreliable on CM5 (always reads 0),
-+	 * so DCS is the authoritative detection method.
++	 * Read panel chip ID register via DCS to determine revision.
++	 * This is more reliable than the GPIO strapping, which may
++	 * report incorrect value on some hardware configurations.
 +	 * New revision panels (JD9365D) return 0x39.
 +	 */
 +	dcs_write_seq(0x11); // SLPOUT
@@ -44,13 +44,11 @@
  	/* Exit sleep mode and power on */
  	if (ctx->is_new_panel)
  		cwu50_init_sequence2(ctx);
-@@ -729,12 +741,9 @@
+@@ -729,12 +740,12 @@
  		return ret;
  	}
  
--	dev_info(dev, "id_gpio %s\n", ctx->id_gpio ? "present" : "absent");
 -	ctx->is_new_panel = gpiod_get_value_cansleep(ctx->id_gpio);
--	dev_info(dev, "GPIO raw strapping value: %d\n", ctx->is_new_panel);
 -	if (ctx->is_new_panel) {
 -		dev_info(dev, "Detected new panel type\n");
 -	} else {
@@ -59,6 +57,7 @@
 +		int gpio_val = gpiod_get_value_cansleep(ctx->id_gpio);
 +		dev_info(dev, "GPIO strapping: %d (DCS overrides in prepare)\n", gpio_val);
  	}
-+	ctx->is_new_panel = 0; /* DCS detection in prepare() is authoritative */
++	/* Panel detection done via DCS in prepare() */
++	ctx->is_new_panel = 0;
  
  	/*
