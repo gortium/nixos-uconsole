@@ -1,16 +1,17 @@
 --- a/drivers/gpu/drm/panel/panel-cwu50.c
 +++ b/drivers/gpu/drm/panel/panel-cwu50.c
-@@ -584,6 +584,7 @@ static int cwu50_prepare(struct drm_panel *panel)
+@@ -536,6 +536,7 @@
  	struct cwu50 *ctx = panel_to_cwu50(panel);
  	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
  	int ret;
 +	u8 buf[4] = { };
 
- 	if (ctx->prepared)
+ 	if (!ctx->enabled)
  		return 0;
-@@ -634,6 +635,14 @@ static int cwu50_prepare(struct drm_panel *panel)
+@@ -632,6 +633,15 @@
+ 		dev_err(ctx->dev, "failed to enable vblank TE (%d)\n", ret);
+ 		return ret;
  	}
- 	/* Exit sleep mode and power on */
 +	dcs_write_seq(0x11); // SLPOUT
 +	msleep(120);
 +	dcs_write_seq(0xE0,0x00);
@@ -20,18 +21,16 @@
 +		 buf[0], (buf[0] == 0x39) ? "new" : "old");
 +
 +	if(buf[0] == 0x39) ctx->is_new_panel = 1;
-
+ 	/* Exit sleep mode and power on */
  	if (ctx->is_new_panel)
  		cwu50_init_sequence2(ctx);
-@@ -730,7 +739,10 @@ static int cwu50_probe(struct mipi_dsi_device *dsi)
+@@ -730,7 +740,9 @@
  		return ret;
  	}
 
--	ctx->is_new_panel = gpiod_get_value_cansleep(ctx->id_gpio);
 +	dev_info(dev, "id_gpio %s\n", ctx->id_gpio ? "present" : "absent");
-+	ctx->is_new_panel = gpiod_get_value_cansleep(ctx->id_gpio);
+ 	ctx->is_new_panel = gpiod_get_value_cansleep(ctx->id_gpio);
 +	dev_info(dev, "GPIO raw strapping value: %d\n", ctx->is_new_panel);
-+
  	if (ctx->is_new_panel) {
  		dev_info(dev, "Detected new panel type\n");
  	} else {
