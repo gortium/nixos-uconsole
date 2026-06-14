@@ -1,6 +1,6 @@
 --- a/drivers/gpu/drm/panel/panel-cwu50.c
 +++ b/drivers/gpu/drm/panel/panel-cwu50.c
-@@ -569,7 +569,7 @@
+@@ -568,7 +568,7 @@
  	}
  	msleep(120);
 
@@ -9,7 +9,15 @@
  		/* Assert reset on RESX */
  		dev_info(ctx->dev, "asserting reset pin for old panel\n");
  		gpiod_set_value_cansleep(ctx->id_gpio, 1);
-@@ -617,7 +617,7 @@
+@@ -585,6 +585,7 @@
+ 	struct cwu50 *ctx = panel_to_cwu50(panel);
+ 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
+ 	int ret;
++	u8 buf[4] = { };
+
+ 	if (ctx->prepared)
+ 		return 0;
+@@ -616,7 +617,7 @@
  		msleep(5);
  	}
 
@@ -18,11 +26,10 @@
  		dev_info(ctx->dev, "old panel, cycling the reset pin\n");
  		/* Cycle RESX (Hardware Reset) */
  		gpiod_set_value_cansleep(ctx->id_gpio, 1);
-@@ -632,6 +632,15 @@
+@@ -631,6 +632,15 @@
  		dev_err(ctx->dev, "failed to enable vblank TE (%d)\n", ret);
  		return ret;
  	}
-+	u8 buf[4] = { };
 +	dcs_write_seq(0x11); // SLPOUT
 +	msleep(120);
 +	dcs_write_seq(0xE0,0x00);
@@ -35,7 +42,7 @@
  	/* Exit sleep mode and power on */
  	if (ctx->is_new_panel)
  		cwu50_init_sequence2(ctx);
-@@ -730,7 +739,9 @@
+@@ -729,7 +739,9 @@
  		return ret;
  	}
 
