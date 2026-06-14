@@ -20,6 +20,10 @@ let
     ./patches/0005-overlays.patch # Device tree overlays
     ./patches/0006-bcm2835-staging.patch # BCM2835 staging driver fixes
     ./patches/0007-simple-switch.patch # Audio switch support
+    # Gortium fixes for CM5 display
+    ./patches/0008-panel-cwu50-dcs-read.patch # DCS-based panel detection for CM5 DSI
+    ./patches/0009-panel-cwu50-page-select.patch # Fix page select in init_sequence1
+    ./patches/0010-panel-cwu50-dsi-init0.patch # Set 4-lane DSI mode via DSI_INIT0
   ];
 in
 {
